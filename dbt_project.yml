@@ -15,6 +15,9 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+flags:
+  send_anonymous_usage_stats: false
+
 vars:
   # Base period used to compute the fixed stratum weights for the
   # mixadj_fixed_2010 index variant. See DECISIONS.md for why 2010-2012.
