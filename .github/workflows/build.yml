@@ -1,0 +1,116 @@
+name: dbt build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    # Weekly full rebuild against the live PPR export (Mondays 06:00 UTC)
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+env:
+  DBT_PROFILES_DIR: .
+
+jobs:
+  fixture:
+    name: fast build (fixture data)
+    runs-on: ubuntu-latest
+    env:
+      PPR_USE_FIXTURE: "true"
+      PPR_DUCKDB_PATH: ci_fixture.duckdb
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: dbt debug
+        run: dbt debug
+
+      - name: dbt build (fixture, --warn-error)
+        # The ~40k-row committed fixture is a stratified ~1/20 sample of the
+        # real dataset, so its smallest Dublin-district x property-type
+        # strata don't reliably clear the production min_stratum_n=30 gate
+        # every month. Scaling the gate down proportionally for this job
+        # only (never for the weekly full job) keeps the fixture build fast
+        # and deterministic without changing the real methodology - see
+        # DECISIONS.md.
+        run: dbt build --warn-error --vars '{min_stratum_n: 2}'
+
+  full:
+    name: full build (live PPR download)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    env:
+      PPR_DUCKDB_PATH: ppr.duckdb
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch live PPR data
+        run: python scripts/fetch_ppr.py
+
+      - name: Fetch CSO RPPI benchmark
+        run: python scripts/fetch_cso_rppi.py
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: dbt build (full data, --warn-error)
+        run: dbt build --warn-error
+
+      - name: dbt docs generate
+        run: dbt docs generate
+
+      - name: Export marts to parquet, then to dashboard JSON
+        run: |
+          dbt run-operation export_marts
+          python scripts/export_dashboard_data.py
+
+      - name: Refresh committed dbt docs + dashboard data
+        run: |
+          cp target/index.html target/manifest.json target/catalog.json target/run_results.json target/semantic_manifest.json docs/dbt/
+
+      - name: Assemble Pages output
+        # docs/ is the whole Pages site: docs/dashboard (static HTML dashboard,
+        # dependency-free) and docs/dbt (dbt docs / lineage DAG). See README
+        # "Why a static dashboard, not Evidence.dev" for why there's no
+        # Node/npm build step here.
+        run: |
+          mkdir -p _site
+          cp -r docs/. _site/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-pages:
+    name: deploy to GitHub Pages
+    needs: full
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
