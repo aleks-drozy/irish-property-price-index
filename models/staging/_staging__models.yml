@@ -1,0 +1,97 @@
+version: 2
+
+models:
+  - name: stg_ppr__transactions
+    description: >
+      One row per record in the PSRA Residential Property Price Register raw
+      export, positionally renamed and typed. 1:1 with the source file,
+      including exact duplicate rows and rows later excluded from the index
+      (Not Full Market Price = true, VAT-exclusive new builds not yet
+      grossed up). No business logic applied here.
+    columns:
+      - name: transaction_id
+        description: >
+          Surrogate key hashed over all 9 raw source columns. Exact
+          duplicate source rows collapse to the same transaction_id;
+          deduping on this key happens in int_transactions__cleaned, not
+          here, because staging must stay 1:1 with the source.
+        data_tests:
+          - not_null
+      - name: date_of_sale
+        description: Parsed sale date (source format dd/mm/yyyy).
+        data_tests:
+          - not_null
+      - name: county
+        description: One of the 26 counties of the Republic of Ireland, as filed by PSRA.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                - CARLOW
+                - CAVAN
+                - CLARE
+                - CORK
+                - DONEGAL
+                - DUBLIN
+                - GALWAY
+                - KERRY
+                - KILDARE
+                - KILKENNY
+                - LAOIS
+                - LEITRIM
+                - LIMERICK
+                - LONGFORD
+                - LOUTH
+                - MAYO
+                - MEATH
+                - MONAGHAN
+                - OFFALY
+                - ROSCOMMON
+                - SLIGO
+                - TIPPERARY
+                - WATERFORD
+                - WESTMEATH
+                - WEXFORD
+                - WICKLOW
+          - relationships:
+              arguments:
+                to: ref('county_region_map')
+                field: county
+      - name: price_eur
+        description: >
+          Sale price in EUR, parsed from the raw "Price (EUR)" column
+          (euro sign + thousands commas stripped). Genuinely ranges from
+          ~EUR 5k to a small number of EUR >20m rows that are almost
+          certainly data-entry errors - PSRA does not edit the register, so
+          these are kept here and only excluded (with a logged reason)
+          downstream.
+        data_tests:
+          - not_null
+      - name: description_of_property
+        description: >
+          Raw property-type free text. Includes Irish-language filing
+          variants and two garbled/mis-encoded variants seen in the live
+          2026-07-30 export. Every distinct value must exist in
+          seeds/property_type_map.csv - see assert_unmapped_descriptions_are_zero.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('property_type_map')
+                field: description_raw
+
+  - name: stg_cso__rppi
+    description: >
+      One row per (statistic, month, region) cell of the CSO Residential
+      Property Price Index (HPM09), flattened from the PxStat JSON-stat 2.0
+      cube. Used only as an external validation benchmark in
+      mart_index_vs_cso - see README for why it is not a like-for-like
+      comparison with the PPR-derived index.
+    columns:
+      - name: month
+        description: First of the reference month.
+      - name: statistic_code
+        description: "HPM09C01 = index level, C02..C04 = pct-change variants."
+      - name: region_code
+        description: "PxStat region code; '-' = National all-residential, '05' = Dublin all-residential."

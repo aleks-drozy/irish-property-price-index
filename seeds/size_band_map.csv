@@ -1,0 +1,8 @@
+size_desc_raw,size_band
+,UNKNOWN
+greater than or equal to 38 sq metres and less than 125 sq metres,38_TO_125
+greater than 125 sq metres,GTE_125
+greater than or equal to 125 sq metres,GTE_125
+less than 38 sq metres,LT_38
+níos mó ná nó cothrom le 38 méadar cearnach agus níos lú ná 125 méadar cearnach,38_TO_125
+n?os l? n? 38 m?adar cearnach,LT_38

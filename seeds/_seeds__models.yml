@@ -1,0 +1,77 @@
+version: 2
+
+seeds:
+  - name: property_type_map
+    description: >
+      Every distinct raw value of `Description of Property` seen in the
+      2026-07-30 PPR export, mapped to {NEW, SECOND_HAND}, including two
+      Irish-language filing variants and two garbled/mis-encoded variants.
+      This is the enforcement point for assert_unmapped_descriptions_are_zero:
+      if PSRA introduces a new description string, that test fails CI.
+    columns:
+      - name: description_raw
+        data_tests:
+          - unique
+          - not_null
+      - name: property_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["NEW", "SECOND_HAND"]
+
+  - name: size_band_map
+    description: >
+      Raw `Property Size Description` strings mapped to size bands.
+      Profiling (see DECISIONS.md, block 0) found overall coverage of only
+      6.6%, collapsing to ~0% from 2019 onward - this field is NOT used to
+      stratify the published index (Tier B gate failed). Kept only for
+      mart_data_quality coverage reporting.
+    columns:
+      - name: size_desc_raw
+        data_tests:
+          - unique
+      - name: size_band
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["LT_38", "38_TO_125", "GTE_125", "UNKNOWN"]
+
+  - name: county_region_map
+    description: >
+      County -> 4-group region bucket used for national-level stratification.
+      GDA_COMMUTER = Kildare/Meath/Wicklow (NTA Greater Dublin Area commuter
+      counties, excluding Dublin itself). OTHER_URBAN = the other three
+      county-borough cities (Cork, Galway, Limerick, Waterford). This
+      grouping is a methodological choice - see DECISIONS.md.
+    columns:
+      - name: county
+        data_tests:
+          - unique
+          - not_null
+      - name: region
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["DUBLIN", "GDA_COMMUTER", "OTHER_URBAN", "REST_OF_IRELAND"]
+
+  - name: dublin_district_map
+    description: >
+      Dublin postal-district code (from Eircode routing key or address
+      regex fallback - see int_transactions__stratified) -> one of 4
+      district groups. Only covers real Dublin district codes (01-24,
+      06W); anything else (including regex false positives) falls through
+      to DUBLIN_UNKNOWN in the intermediate model.
+    columns:
+      - name: district_code
+        data_tests:
+          - unique
+          - not_null
+      - name: district_group
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["CITY_CENTRE", "NORTH_DUBLIN", "SOUTH_DUBLIN", "WEST_DUBLIN"]
