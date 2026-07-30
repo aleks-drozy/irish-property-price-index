@@ -1,0 +1,115 @@
+version: 2
+
+models:
+  - name: int_transactions__cleaned
+    description: >
+      Same row count as stg_ppr__transactions (nothing is dropped here,
+      only flagged via exclusion_reason) plus VAT gross-up and
+      winsorisation applied.
+    columns:
+      - name: transaction_id
+        data_tests:
+          - not_null
+      - name: exclusion_reason
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - exact_duplicate
+                  - not_full_market_price
+                  - unmapped_property_type
+                  - invalid_price
+              config:
+                where: "exclusion_reason is not null"
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('stg_ppr__transactions')
+
+  - name: int_transactions__stratified
+    description: >
+      One or two rows per in-index transaction (NATIONAL always, DUBLIN
+      additionally if county = DUBLIN). Feeds both the mix-adjusted and
+      headline index calculations.
+    columns:
+      - name: region_scope
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["NATIONAL", "DUBLIN"]
+      - name: geo_bucket
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - DUBLIN
+                  - GDA_COMMUTER
+                  - OTHER_URBAN
+                  - REST_OF_IRELAND
+                  - CITY_CENTRE
+                  - NORTH_DUBLIN
+                  - SOUTH_DUBLIN
+                  - WEST_DUBLIN
+                  - DUBLIN_UNKNOWN
+      - name: stratum_key
+        data_tests:
+          - not_null
+      - name: price_eur_index_basis
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+  - name: int_strata__base_weights
+    description: >
+      Fixed weight + base-period median per (region_scope, stratum,
+      weight_variant). Weights sum to 1.0 per (region_scope,
+      weight_variant) - see tests/assert_weights_sum_to_one.sql.
+    columns:
+      - name: weight_variant
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["fixed_2010", "fixed_fullsample"]
+      - name: weight
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 1"
+
+  - name: int_strata__period_medians
+    description: >
+      Median price + n per (region_scope, stratum, month). median_price is
+      NULL wherever n < {{ var('min_stratum_n') }} - see
+      tests/assert_no_thin_strata_in_index.sql.
+    columns:
+      - name: n
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+
+  - name: int_index__mix_adjusted
+    description: Mix-adjusted stratified-median index, two weighting variants.
+    columns:
+      - name: index_value
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+  - name: int_index__headline
+    description: Naive mean/median index, same grain, for contrast.
+    columns:
+      - name: index_value
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
