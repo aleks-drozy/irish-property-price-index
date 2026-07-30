@@ -1,0 +1,114 @@
+version: 2
+
+models:
+  - name: mart_price_index_monthly
+    description: >
+      DASHBOARD PRIMARY. One row per (region_scope, index_variant,
+      sale_month). region_scope is DUBLIN or NATIONAL - two independent
+      index computations, each with their own fixed base weights.
+      {{ doc("mix_adjustment_methodology") }}
+    columns:
+      - name: price_index_id
+        data_tests:
+          - unique
+          - not_null
+      - name: region_scope
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["DUBLIN", "NATIONAL"]
+      - name: index_variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                - headline_mean
+                - headline_median
+                - mixadj_fixed_2010
+                - mixadj_fixed_fullsample
+      - name: index_value
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+  - name: mart_mix_shift
+    description: >
+      The Simpson's-paradox exhibit. One row per (region_scope, sale_month,
+      stratum_key) - stratum's share of that month's transactions.
+    columns:
+      - name: mix_shift_id
+        data_tests:
+          - unique
+          - not_null
+      - name: region_scope
+        data_tests:
+          - not_null
+      - name: property_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["NEW", "SECOND_HAND"]
+      - name: share
+        data_tests:
+          - not_null
+
+  - name: mart_index_vs_cso
+    description: >
+      Own mixadj_fixed_fullsample index vs CSO RPPI (HPM09), both rebased
+      to a common base month. Directional validation only - see README.
+    columns:
+      - name: index_vs_cso_id
+        data_tests:
+          - unique
+          - not_null
+      - name: region_scope
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["DUBLIN", "NATIONAL"]
+
+  - name: mart_transaction_volumes
+    description: One row per (month, county). Volumes, medians, YoY change.
+    columns:
+      - name: transaction_volume_id
+        data_tests:
+          - unique
+          - not_null
+      - name: n_transactions
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+      - name: median_price
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 1000 and 20000000"
+              config:
+                where: "median_price is not null"
+
+  - name: mart_data_quality
+    description: >
+      One row per month. Rows in vs excluded by reason (never silently
+      dropped), plus Property Size Description coverage - the evidence
+      behind the Tier-A-only stratification call in DECISIONS.md.
+    columns:
+      - name: data_quality_id
+        data_tests:
+          - unique
+          - not_null
+      - name: n_total
+        data_tests:
+          - not_null
+      - name: pct_size_description_coverage
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
