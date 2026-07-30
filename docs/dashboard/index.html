@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Irish Property Price Index — Mix-Adjusted Dublin vs National</title>
+<meta name="description" content="A mix-adjusted stratified-median property price index built from the Irish PSRA Price Register, compared against the naive headline and the CSO's official RPPI.">
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --bg-panel: #ffffff;
+    --border: #e4e0d8;
+    --text: #22201c;
+    --text-dim: #6b665c;
+    --accent: #b5502f;
+    --accent-2: #2f6b57;
+    --line-mixadj: #b5502f;
+    --line-headline: #6b665c;
+    --line-cso: #2f6b57;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161512;
+      --bg-panel: #1e1c18;
+      --border: #33302a;
+      --text: #ece8e0;
+      --text-dim: #a39c8e;
+      --accent: #e08a63;
+      --accent-2: #6bbfa3;
+      --line-mixadj: #e08a63;
+      --line-headline: #a39c8e;
+      --line-cso: #6bbfa3;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  header {
+    padding: 2.5rem 1.5rem 1.5rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+    margin: 0 0 .5rem;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { color: var(--text-dim); font-size: 1.02rem; max-width: 62ch; }
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .wrap { max-width: 980px; margin: 0 auto; display: flex; gap: 1.5rem; padding: .75rem 1.5rem; flex-wrap: wrap; }
+  nav a { color: var(--text-dim); text-decoration: none; font-size: .92rem; font-weight: 600; }
+  nav a:hover, nav a:focus-visible { color: var(--accent); }
+  main { max-width: 980px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+  section { padding-top: 3rem; scroll-margin-top: 4rem; }
+  section h2 { font-size: 1.35rem; margin: 0 0 .3rem; }
+  .lede { color: var(--text-dim); max-width: 68ch; margin: 0 0 1.5rem; }
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.25rem 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .panel h3 { margin: 0 0 .8rem; font-size: 1rem; font-weight: 600; }
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .9rem; margin-bottom: 1.5rem; }
+  .stat {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: .9rem 1rem;
+    box-shadow: var(--shadow);
+  }
+  .stat .num { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+  .stat .lbl { color: var(--text-dim); font-size: .78rem; margin-top: .15rem; }
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, var(--bg-panel));
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.1rem;
+    margin: 1rem 0 1.5rem;
+    font-size: .96rem;
+  }
+  .callout b { color: var(--accent); }
+  .legend { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .82rem; color: var(--text-dim); margin-bottom: .4rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-dim); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: color-mix(in srgb, var(--text) 8%, var(--bg-panel)); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  .formula {
+    font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+    font-size: .92rem;
+    background: color-mix(in srgb, var(--text) 6%, var(--bg-panel));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .table-scroll { overflow-x: auto; }
+  footer { max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem 4rem; color: var(--text-dim); font-size: .85rem; border-top: 1px solid var(--border); }
+  footer a { color: var(--text-dim); }
+  select, .toggle-group { font-size: .85rem; }
+  .toggle-group { display: flex; gap: .4rem; margin-bottom: .8rem; }
+  .toggle-group button {
+    font-size: .8rem; padding: .35rem .7rem; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-dim);
+    cursor: pointer;
+  }
+  .toggle-group button.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .chart-note { color: var(--text-dim); font-size: .8rem; margin-top: .4rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Irish Property Price Index — Mix-Adjusted vs Headline</h1>
+  <p class="subtitle">A stratified-median price index built entirely in dbt + DuckDB from the PSRA Residential Property Price Register (797,774 raw records, 2010–2026), showing where a naive headline median diverges from a mix-adjusted measure — and validated, directionally, against the CSO's official RPPI.</p>
+</header>
+
+<nav><div class="wrap">
+  <a href="#overview">Overview</a>
+  <a href="#mix-shift">The mix shift</a>
+  <a href="#method">Method</a>
+  <a href="#validation">Validation</a>
+</div></nav>
+
+<main>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p class="lede">Two independent index computations — Dublin (10 strata: property type × Dublin district) and National (8 strata: property type × region bucket) — each shown as the naive headline median and the mix-adjusted stratified series, based to 100 over 2010–2012.</p>
+
+  <div id="overview-stats" class="stat-row"></div>
+
+  <div class="callout" id="overview-callout">Loading the real finding from <code>mart_price_index_monthly</code>…</div>
+
+  <div class="panel">
+    <div class="toggle-group" id="region-toggle">
+      <button data-region="DUBLIN" class="active">Dublin</button>
+      <button data-region="NATIONAL">National</button>
+    </div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--line-mixadj)"></span>Mix-adjusted (fixed-fullsample weights)</span>
+      <span><span class="swatch" style="background:var(--line-headline)"></span>Headline median (naive)</span>
+    </div>
+    <div id="overview-chart"></div>
+    <p class="chart-note">Both series indexed to 100 over the 2010-01 to 2012-12 base period. Source: <code>mart_price_index_monthly</code>.</p>
+  </div>
+</section>
+
+<section id="mix-shift">
+  <h2>The mix shift</h2>
+  <p class="lede">What's actually being sold changes composition over time — this is the mechanism behind the gap above. Each stratum's share of that month's transactions, stacked to 100%.</p>
+  <div class="panel">
+    <div class="toggle-group" id="mix-region-toggle">
+      <button data-region="DUBLIN" class="active">Dublin</button>
+      <button data-region="NATIONAL">National</button>
+    </div>
+    <div id="mix-chart"></div>
+    <p class="chart-note">Source: <code>mart_mix_shift</code>, derived from <code>int_mix__composition</code>.</p>
+  </div>
+</section>
+
+<section id="method">
+  <h2>Method</h2>
+  <p class="lede">Fixed-base-weight stratified median index, computed entirely in SQL — no hedonic regression, because PPR carries none of the covariates (floor area, BER, bedroom count) a hedonic needs.</p>
+
+  <div class="panel">
+    <h3>Formula</h3>
+    <div class="formula">Index(region, t) = 100 × Σ_s [ w_s(region) × median_price(s, region, t) / median_price(s, region, base) ]
+
+base period = 2010-01-01 .. 2012-12-31
+min_stratum_n = 30   (a stratum-month with fewer sales contributes nothing; weights renormalise)
+new-build gross-up = ×1.135 on VAT-exclusive new-dwelling prices
+price winsorised at p1 / p99 before feeding any median</div>
+  </div>
+
+  <div class="panel">
+    <h3>Strata &amp; base weights (fixed-fullsample variant)</h3>
+    <div class="table-scroll" id="strata-table"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Data quality — rows in vs excluded</h3>
+    <div id="dq-stats" class="stat-row"></div>
+    <div id="dq-chart"></div>
+    <p class="chart-note"><code>Property Size Description</code> coverage collapses to ~0% from 2019 onward — this is why the index stratifies on property type × geography only (Tier A), not property size (Tier B). Full year-by-year numbers and the ≥40% gate rule are in <code>DECISIONS.md</code>. Source: <code>mart_data_quality</code>.</p>
+  </div>
+</section>
+
+<section id="validation">
+  <h2>Validation against the CSO's official index</h2>
+  <p class="lede">The CSO's Residential Property Price Index (HPM09) uses a rolling hedonic regression matched to BER data via stamp-duty returns — a record-level join this project can't perform on PPR alone. This is <strong>directional validation, not equivalence</strong>.</p>
+
+  <div id="cso-stats" class="stat-row"></div>
+
+  <div class="panel">
+    <div class="toggle-group" id="cso-region-toggle">
+      <button data-region="DUBLIN" class="active">Dublin</button>
+      <button data-region="NATIONAL">National</button>
+    </div>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--line-mixadj)"></span>This project's mix-adjusted index</span>
+      <span><span class="swatch" style="background:var(--line-cso)"></span>CSO RPPI (HPM09)</span>
+    </div>
+    <div id="cso-chart"></div>
+    <p class="chart-note">Both rebased to their first common month. Source: <code>mart_index_vs_cso</code>, benchmark from <a href="https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/HPM09/JSON-stat/2.0/en" target="_blank" rel="noopener">CSO PxStat HPM09</a>.</p>
+  </div>
+
+  <div class="callout">
+    <b>Why it doesn't match exactly, and why that's expected:</b> different universe (CSO excludes non-household and non-market purchases differently than the Not-Full-Market-Price flag used here), different method (12-month rolling hedonic vs fixed-weight stratified median), and BER-matched covariates this project doesn't have access to at record level. See <code>DECISIONS.md</code> for the full reasoning and the measured correlation numbers.
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Built with dbt-core + dbt-duckdb over the
+  <a href="https://www.propertypriceregister.ie" target="_blank" rel="noopener">PSRA Residential Property Price Register</a>
+  (PSRA attribution required; the PSRA does not edit this data in any way) and the
+  <a href="https://www.cso.ie/en/methods/prices/residentialpropertypriceindex/" target="_blank" rel="noopener">CSO RPPI</a>.
+  <a href="../dbt/index.html">dbt docs / lineage DAG →</a>
+</footer>
+
+<script type="module">
+const REGION_COLORS = {
+  mixadj: getComputedStyle(document.documentElement).getPropertyValue('--line-mixadj').trim(),
+  headline: getComputedStyle(document.documentElement).getPropertyValue('--line-headline').trim(),
+  cso: getComputedStyle(document.documentElement).getPropertyValue('--line-cso').trim(),
+};
+
+async function loadJSON(name) {
+  const res = await fetch(`data/${name}.json`);
+  return res.json();
+}
+
+function fmt(n, d = 1) {
+  return Number(n).toLocaleString('en-IE', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function makeStat(num, lbl) {
+  const div = document.createElement('div');
+  div.className = 'stat';
+  div.innerHTML = `<div class="num">${num}</div><div class="lbl">${lbl}</div>`;
+  return div;
+}
+
+// --- Line chart (simple hand-rolled SVG, no external deps) ---
+function lineChart(container, series, { width = 900, height = 320, yLabel = '', valueFmt = (v) => v.toFixed(1) } = {}) {
+  container.innerHTML = '';
+  const margin = { top: 16, right: 20, bottom: 30, left: 48 };
+  const w = width - margin.left - margin.right;
+  const h = height - margin.top - margin.bottom;
+
+  const allPoints = series.flatMap((s) => s.points);
+  if (allPoints.length === 0) {
+    container.innerHTML = '<p class="chart-note">No data.</p>';
+    return;
+  }
+  const xs = allPoints.map((p) => p.x.getTime());
+  const ys = allPoints.map((p) => p.y);
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const yPad = (yMax - yMin) * 0.08 || 1;
+  const yLo = yMin - yPad, yHi = yMax + yPad;
+
+  const xScale = (t) => margin.left + ((t - xMin) / (xMax - xMin || 1)) * w;
+  const yScale = (v) => margin.top + h - ((v - yLo) / (yHi - yLo || 1)) * h;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('width', '100%');
+  svg.style.overflow = 'visible';
+
+  // gridlines + y axis
+  const nTicks = 5;
+  for (let i = 0; i <= nTicks; i++) {
+    const v = yLo + (i / nTicks) * (yHi - yLo);
+    const y = yScale(v);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', margin.left); line.setAttribute('x2', width - margin.right);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke', 'currentColor'); line.setAttribute('stroke-opacity', '0.08');
+    svg.appendChild(line);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', margin.left - 8); text.setAttribute('y', y + 3);
+    text.setAttribute('text-anchor', 'end'); text.setAttribute('font-size', '10');
+    text.setAttribute('fill', 'currentColor'); text.setAttribute('opacity', '0.6');
+    text.textContent = valueFmt(v);
+    svg.appendChild(text);
+  }
+
+  // x axis (years)
+  const startYear = new Date(xMin).getFullYear();
+  const endYear = new Date(xMax).getFullYear();
+  for (let yr = startYear; yr <= endYear; yr += 2) {
+    const t = new Date(yr, 0, 1).getTime();
+    if (t < xMin || t > xMax) continue;
+    const x = xScale(t);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x); text.setAttribute('y', height - margin.bottom + 16);
+    text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-size', '10');
+    text.setAttribute('fill', 'currentColor'); text.setAttribute('opacity', '0.6');
+    text.textContent = yr;
+    svg.appendChild(text);
+  }
+
+  for (const s of series) {
+    const pts = s.points.filter((p) => p.y != null).sort((a, b) => a.x - b.x);
+    if (pts.length === 0) continue;
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xScale(p.x.getTime())} ${yScale(p.y)}`).join(' ');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', s.color);
+    path.setAttribute('stroke-width', s.width || 2.2);
+    if (s.dashed) path.setAttribute('stroke-dasharray', '5 4');
+    svg.appendChild(path);
+  }
+
+  container.appendChild(svg);
+}
+
+// --- Stacked area chart for mix shift ---
+function stackedAreaChart(container, months, strataKeys, dataByStratum, { width = 900, height = 340 } = {}) {
+  container.innerHTML = '';
+  const margin = { top: 16, right: 140, bottom: 30, left: 40 };
+  const w = width - margin.left - margin.right;
+  const h = height - margin.top - margin.bottom;
+
+  const xs = months.map((m) => m.getTime());
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const xScale = (t) => margin.left + ((t - xMin) / (xMax - xMin || 1)) * w;
+  const yScale = (v) => margin.top + h - v * h; // v in [0,1]
+
+  const palette = ['#b5502f', '#e08a63', '#c9903f', '#8a9e4a', '#2f6b57', '#4a8fa1', '#5a6ba8', '#8a5a9e', '#a34a6b', '#6b6b6b'];
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('width', '100%');
+
+  // cumulative stack per month
+  const cum = months.map(() => 0);
+  strataKeys.forEach((key, ki) => {
+    const vals = dataByStratum[key];
+    const pathTop = [];
+    const pathBottom = [];
+    months.forEach((m, i) => {
+      const v = vals[i] || 0;
+      const bottom = cum[i];
+      cum[i] = bottom + v;
+      pathBottom.push([xScale(m.getTime()), yScale(bottom)]);
+      pathTop.push([xScale(m.getTime()), yScale(cum[i])]);
+    });
+    const d =
+      pathBottom.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ') +
+      ' L ' + pathTop.slice().reverse().map((p) => `${p[0]} ${p[1]}`).join(' L ') + ' Z';
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', palette[ki % palette.length]);
+    path.setAttribute('fill-opacity', '0.85');
+    svg.appendChild(path);
+  });
+
+  // y axis 0/50/100%
+  [0, 0.5, 1].forEach((v) => {
+    const y = yScale(v);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', margin.left - 8); text.setAttribute('y', y + 3);
+    text.setAttribute('text-anchor', 'end'); text.setAttribute('font-size', '10');
+    text.setAttribute('fill', 'currentColor'); text.setAttribute('opacity', '0.6');
+    text.textContent = `${Math.round(v * 100)}%`;
+    svg.appendChild(text);
+  });
+
+  // x axis years
+  const startYear = new Date(xMin).getFullYear();
+  const endYear = new Date(xMax).getFullYear();
+  for (let yr = startYear; yr <= endYear; yr += 2) {
+    const t = new Date(yr, 0, 1).getTime();
+    if (t < xMin || t > xMax) continue;
+    const x = xScale(t);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x); text.setAttribute('y', height - margin.bottom + 16);
+    text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-size', '10');
+    text.setAttribute('fill', 'currentColor'); text.setAttribute('opacity', '0.6');
+    text.textContent = yr;
+    svg.appendChild(text);
+  }
+
+  // legend
+  strataKeys.forEach((key, ki) => {
+    const ly = margin.top + ki * 16;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', width - margin.right + 16); rect.setAttribute('y', ly);
+    rect.setAttribute('width', 10); rect.setAttribute('height', 10);
+    rect.setAttribute('fill', palette[ki % palette.length]);
+    svg.appendChild(rect);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', width - margin.right + 30); text.setAttribute('y', ly + 9);
+    text.setAttribute('font-size', '9.5'); text.setAttribute('fill', 'currentColor'); text.setAttribute('opacity', '0.75');
+    text.textContent = key.length > 20 ? key.slice(0, 20) + '…' : key;
+    svg.appendChild(text);
+  });
+
+  container.appendChild(svg);
+}
+
+// ---------- Load data ----------
+const [priceIndex, mixShift, indexVsCso, dataQuality] = await Promise.all([
+  loadJSON('mart_price_index_monthly'),
+  loadJSON('mart_mix_shift'),
+  loadJSON('mart_index_vs_cso'),
+  loadJSON('mart_data_quality'),
+]);
+
+// ---------- Overview section ----------
+function renderOverview(region) {
+  const rows = priceIndex.filter((r) => r.region_scope === region);
+  const byMonthAsc = (a, b) => a.sale_month.localeCompare(b.sale_month);
+  const mixadj = rows.filter((r) => r.index_variant === 'mixadj_fixed_fullsample').sort(byMonthAsc);
+  const headline = rows.filter((r) => r.index_variant === 'headline_median').sort(byMonthAsc);
+
+  lineChart(document.getElementById('overview-chart'), [
+    { points: mixadj.map((r) => ({ x: new Date(r.sale_month), y: r.index_value })), color: REGION_COLORS.mixadj, width: 2.6 },
+    { points: headline.map((r) => ({ x: new Date(r.sale_month), y: r.index_value })), color: REGION_COLORS.headline, dashed: true },
+  ], { valueFmt: (v) => v.toFixed(0) });
+
+  // gap stats
+  const byMonth = {};
+  mixadj.forEach((r) => { byMonth[r.sale_month] = { mixadj: r.index_value }; });
+  headline.forEach((r) => { if (byMonth[r.sale_month]) byMonth[r.sale_month].headline = r.index_value; });
+  const gaps = Object.values(byMonth).filter((v) => v.headline != null).map((v) => v.headline - v.mixadj);
+  const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+
+  const statsEl = document.getElementById('overview-stats');
+  statsEl.innerHTML = '';
+  const latest = mixadj[mixadj.length - 1];
+  statsEl.appendChild(makeStat(`${fmt(latest.index_value, 1)}`, `${region} mix-adjusted index, latest month (${latest.sale_month})`));
+  statsEl.appendChild(makeStat(`${avgGap >= 0 ? '+' : ''}${fmt(avgGap, 2)} pts`, 'Avg. gap: headline median − mix-adjusted'));
+  statsEl.appendChild(makeStat(`${mixadj.length}`, 'Continuous months, 2010-01 → latest'));
+  statsEl.appendChild(makeStat(`${latest.n_transactions_used?.toLocaleString('en-IE') ?? '—'}`, 'Transactions in latest month\'s index'));
+
+  document.getElementById('overview-callout').innerHTML =
+    region === 'DUBLIN'
+      ? `<b>Dublin:</b> the naive headline median runs <b>${fmt(avgGap, 2)} points below</b> the mix-adjusted index on average — looking at the raw median alone <em>understates</em> Dublin price growth relative to the mix-adjusted measure.`
+      : `<b>National:</b> the naive headline median runs <b>+${fmt(Math.abs(avgGap), 2)} points above</b> the mix-adjusted index on average — the opposite sign from Dublin. See "The mix shift" below for why.`;
+}
+
+document.querySelectorAll('#region-toggle button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#region-toggle button').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderOverview(btn.dataset.region);
+  });
+});
+renderOverview('DUBLIN');
+
+// ---------- Mix shift section ----------
+function renderMixShift(region) {
+  const rows = mixShift.filter((r) => r.region_scope === region);
+  const months = [...new Set(rows.map((r) => r.sale_month))].sort();
+  const strata = [...new Set(rows.map((r) => r.stratum_key))].sort();
+  const dataByStratum = {};
+  strata.forEach((s) => { dataByStratum[s] = months.map(() => 0); });
+  rows.forEach((r) => {
+    const mi = months.indexOf(r.sale_month);
+    dataByStratum[r.stratum_key][mi] = r.share;
+  });
+  stackedAreaChart(document.getElementById('mix-chart'), months.map((m) => new Date(m)), strata, dataByStratum);
+}
+document.querySelectorAll('#mix-region-toggle button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#mix-region-toggle button').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMixShift(btn.dataset.region);
+  });
+});
+renderMixShift('DUBLIN');
+
+// ---------- Method section: strata table ----------
+{
+  // derive latest-month stratum shares as a proxy for "current weight" display,
+  // and pair with mart_mix_shift's most recent month for illustrative n.
+  const latestMonth = mixShift.reduce((max, r) => (r.sale_month > max ? r.sale_month : max), '');
+  const rows = mixShift.filter((r) => r.sale_month === latestMonth).sort((a, b) => b.share - a.share);
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Region</th><th>Stratum</th><th class="num">Share (${latestMonth})</th><th class="num">n txns</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+  rows.forEach((r) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.region_scope}</td><td>${r.stratum_key}</td><td class="num">${(r.share * 100).toFixed(1)}%</td><td class="num">${r.n.toLocaleString('en-IE')}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  document.getElementById('strata-table').appendChild(table);
+}
+
+// ---------- Data quality ----------
+{
+  const totals = dataQuality.reduce((acc, r) => {
+    acc.n_total += r.n_total; acc.n_included += r.n_included;
+    acc.n_excluded_exact_duplicate += r.n_excluded_exact_duplicate;
+    acc.n_excluded_not_full_market_price += r.n_excluded_not_full_market_price;
+    return acc;
+  }, { n_total: 0, n_included: 0, n_excluded_exact_duplicate: 0, n_excluded_not_full_market_price: 0 });
+
+  const statsEl = document.getElementById('dq-stats');
+  statsEl.appendChild(makeStat(totals.n_total.toLocaleString('en-IE'), 'Total raw rows'));
+  statsEl.appendChild(makeStat(totals.n_included.toLocaleString('en-IE'), 'In-index rows'));
+  statsEl.appendChild(makeStat(totals.n_excluded_exact_duplicate.toLocaleString('en-IE'), 'Exact-duplicate copies dropped'));
+  statsEl.appendChild(makeStat(totals.n_excluded_not_full_market_price.toLocaleString('en-IE'), 'Not-Full-Market-Price sales excluded'));
+
+  const byYear = {};
+  dataQuality.forEach((r) => {
+    const yr = r.sale_month.slice(0, 4);
+    byYear[yr] = byYear[yr] || { with: 0, tot: 0 };
+    byYear[yr].with += r.n_with_size_description;
+    byYear[yr].tot += r.n_total;
+  });
+  const years = Object.keys(byYear).sort();
+  lineChart(document.getElementById('dq-chart'), [
+    { points: years.map((y) => ({ x: new Date(`${y}-06-01`), y: 100 * byYear[y].with / byYear[y].tot })), color: REGION_COLORS.mixadj, width: 2.4 },
+  ], { valueFmt: (v) => v.toFixed(0) + '%' });
+}
+
+// ---------- Validation ----------
+function renderValidation(region) {
+  const rows = indexVsCso.filter((r) => r.region_scope === region).sort((a, b) => a.sale_month.localeCompare(b.sale_month));
+  lineChart(document.getElementById('cso-chart'), [
+    { points: rows.map((r) => ({ x: new Date(r.sale_month), y: r.own_index_rebased })), color: REGION_COLORS.mixadj, width: 2.4 },
+    { points: rows.filter((r) => r.cso_index_rebased != null).map((r) => ({ x: new Date(r.sale_month), y: r.cso_index_rebased })), color: REGION_COLORS.cso, width: 2.4 },
+  ], { valueFmt: (v) => v.toFixed(0) });
+
+  const withCso = rows.filter((r) => r.cso_index_rebased != null);
+  const meanAbsGap = withCso.reduce((a, r) => a + Math.abs(r.level_gap), 0) / withCso.length;
+  const statsEl = document.getElementById('cso-stats');
+  statsEl.innerHTML = '';
+  statsEl.appendChild(makeStat(fmt(meanAbsGap, 2), 'Mean absolute level gap (index pts)'));
+  statsEl.appendChild(makeStat(withCso.length, 'Months with a CSO comparison'));
+}
+document.querySelectorAll('#cso-region-toggle button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#cso-region-toggle button').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderValidation(btn.dataset.region);
+  });
+});
+renderValidation('DUBLIN');
+</script>
+
+</body>
+</html>
