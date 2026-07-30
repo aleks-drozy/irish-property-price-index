@@ -254,10 +254,20 @@ function fmt(n, d = 1) {
   return Number(n).toLocaleString('en-IE', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+// Escapes any value interpolated into an innerHTML template literal. Not
+// currently exploitable (marts only ever contain enum-like keys and
+// numbers) but applied defensively in case a free-text column is ever
+// added to a mart.
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
+
 function makeStat(num, lbl) {
   const div = document.createElement('div');
   div.className = 'stat';
-  div.innerHTML = `<div class="num">${num}</div><div class="lbl">${lbl}</div>`;
+  div.innerHTML = `<div class="num">${escapeHtml(num)}</div><div class="lbl">${escapeHtml(lbl)}</div>`;
   return div;
 }
 
@@ -459,8 +469,8 @@ function renderOverview(region) {
 
   document.getElementById('overview-callout').innerHTML =
     region === 'DUBLIN'
-      ? `<b>Dublin:</b> the naive headline median runs <b>${fmt(avgGap, 2)} points below</b> the mix-adjusted index on average — looking at the raw median alone <em>understates</em> Dublin price growth relative to the mix-adjusted measure.`
-      : `<b>National:</b> the naive headline median runs <b>+${fmt(Math.abs(avgGap), 2)} points above</b> the mix-adjusted index on average — the opposite sign from Dublin. See "The mix shift" below for why.`;
+      ? `<b>Dublin:</b> the naive headline median runs <b>${escapeHtml(fmt(avgGap, 2))} points below</b> the mix-adjusted index on average — looking at the raw median alone <em>understates</em> Dublin price growth relative to the mix-adjusted measure.`
+      : `<b>National:</b> the naive headline median runs <b>+${escapeHtml(fmt(Math.abs(avgGap), 2))} points above</b> the mix-adjusted index on average — the opposite sign from Dublin. See "The mix shift" below for why.`;
 }
 
 document.querySelectorAll('#region-toggle button').forEach((btn) => {
@@ -501,11 +511,11 @@ renderMixShift('DUBLIN');
   const latestMonth = mixShift.reduce((max, r) => (r.sale_month > max ? r.sale_month : max), '');
   const rows = mixShift.filter((r) => r.sale_month === latestMonth).sort((a, b) => b.share - a.share);
   const table = document.createElement('table');
-  table.innerHTML = `<thead><tr><th>Region</th><th>Stratum</th><th class="num">Share (${latestMonth})</th><th class="num">n txns</th></tr></thead>`;
+  table.innerHTML = `<thead><tr><th>Region</th><th>Stratum</th><th class="num">Share (${escapeHtml(latestMonth)})</th><th class="num">n txns</th></tr></thead>`;
   const tbody = document.createElement('tbody');
   rows.forEach((r) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.region_scope}</td><td>${r.stratum_key}</td><td class="num">${(r.share * 100).toFixed(1)}%</td><td class="num">${r.n.toLocaleString('en-IE')}</td>`;
+    tr.innerHTML = `<td>${escapeHtml(r.region_scope)}</td><td>${escapeHtml(r.stratum_key)}</td><td class="num">${(r.share * 100).toFixed(1)}%</td><td class="num">${r.n.toLocaleString('en-IE')}</td>`;
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
