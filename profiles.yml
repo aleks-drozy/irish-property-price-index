@@ -1,0 +1,16 @@
+# Self-contained profile committed to the repo (not ~/.dbt/profiles.yml) so
+# local runs and CI behave identically. Point dbt at it with:
+#   $env:DBT_PROFILES_DIR = "."          (PowerShell)
+#   export DBT_PROFILES_DIR=.            (bash / CI)
+#
+# PPR_DUCKDB_PATH lets CI point at a throwaway file; defaults to a local
+# warehouse file that is gitignored.
+irish_property_price_index:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('PPR_DUCKDB_PATH', 'data/ppr.duckdb') }}"
+      threads: 4
+      extensions:
+        - httpfs

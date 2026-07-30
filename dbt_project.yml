@@ -1,0 +1,46 @@
+name: 'irish_property_price_index'
+version: '1.0.0'
+config-version: 2
+
+profile: 'irish_property_price_index'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # Base period used to compute the fixed stratum weights for the
+  # mixadj_fixed_2010 index variant. See DECISIONS.md for why 2010-2012.
+  base_period_start: '2010-01-01'
+  base_period_end: '2012-12-31'
+  # minimum sales required in a (stratum, region, period) cell before its
+  # median is allowed to contribute to a published index point.
+  min_stratum_n: 30
+  # winsorisation percentiles applied to price before it feeds any index
+  winsor_low_pct: 0.01
+  winsor_high_pct: 0.99
+  # VAT rate used to gross up VAT-exclusive new-dwelling prices
+  new_build_vat_rate: 0.135
+
+seeds:
+  irish_property_price_index:
+    +schema: seeds
+
+models:
+  irish_property_price_index:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts

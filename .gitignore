@@ -1,0 +1,30 @@
+.venv/
+__pycache__/
+*.pyc
+
+# dbt
+target/
+dbt_packages/
+logs/
+*.duckdb
+*.duckdb.wal
+.user.yml
+
+# raw data (too large / not ours to redistribute at bulk; scripts re-fetch it)
+data/raw/
+
+# keep the small committed fixture used by CI
+!data/fixture/
+!data/fixture/**
+
+# intermediate parquet export (dbt marts -> JSON for the static dashboard)
+.marts_export/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# env
+.env
