@@ -10,14 +10,16 @@ full-data path.
 """
 import sys
 import io
+from pathlib import Path
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import pandas as pd
 import numpy as np
 
-SRC = r"C:\Users\Alex\Projects\irish-property-price-index\data\raw\PPR-ALL.csv"
-OUT = r"C:\Users\Alex\Projects\irish-property-price-index\data\fixture\ppr_fixture.csv"
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "data" / "raw" / "PPR-ALL.csv"
+OUT = ROOT / "data" / "fixture" / "ppr_fixture.csv"
 
 TARGET_ROWS = 40_000
 SEED = 42
