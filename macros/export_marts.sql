@@ -15,7 +15,6 @@
       'mart_data_quality'
   ] %}
   {% set out_dir = env_var('MARTS_EXPORT_DIR', '.marts_export') %}
-  {% do run_query("create schema if not exists tmp_export") %}
   {% for mart in marts %}
     {% set query %}
       copy (select * from {{ ref(mart) }})
