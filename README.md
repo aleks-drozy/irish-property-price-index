@@ -30,8 +30,8 @@ Comparing the naive `headline_median` index against the
   year-on-year, the other says they rose. The largest single swing:
   **National, June 2013** — headline YoY **-6.28%** vs mix-adjusted YoY
   **+6.77%**, a 13.05-point gap, right at the tail of the post-crash
-  trough. Second largest: **Dublin, February 2016** — headline YoY
-  **-5.20%** vs mix-adjusted YoY **+5.28%**.
+  trough. Second largest: **National, April 2014** — headline YoY
+  **-3.45%** vs mix-adjusted YoY **+8.06%**, an 11.51-point gap.
 
 This isn't a "gotcha" about a broken headline number — both series
 correlate at 0.99+ in levels over the full period. It's the standard
@@ -151,7 +151,7 @@ models/
   marts/                  mart_price_index_monthly (dashboard primary), mart_mix_shift,
                            mart_index_vs_cso, mart_transaction_volumes, mart_data_quality
 tests/                    4 singular tests (weights sum to 1, no thin strata in the index,
-                           continuous month series, zero unmapped descriptions) + ~85 generic tests
+                           continuous month series, zero unmapped descriptions) + 69 generic tests
 scripts/                  fetch_ppr.py, fetch_cso_rppi.py, build_fixture.py, export_dashboard_data.py
 docs/dashboard/           static, dependency-free dashboard (Overview / Mix shift / Method / Validation)
 data/fixture/             ~40k-row stratified sample of the real data, committed, used by fast CI
@@ -169,7 +169,7 @@ $env:DBT_PROFILES_DIR = "."
 .venv\Scripts\python scripts\fetch_cso_rppi.py        # ~110KB, no auth
 
 .venv\Scripts\dbt deps
-.venv\Scripts\dbt build --warn-error                  # 91/91 tests, ~2 min on the full 797k rows
+.venv\Scripts\dbt build --warn-error                  # 91/91 nodes pass (14 models, 4 seeds, 73 data tests), ~2 min on the full 797k rows
 
 .venv\Scripts\dbt run-operation export_marts
 .venv\Scripts\python scripts\export_dashboard_data.py
@@ -200,7 +200,7 @@ has been pushed anywhere public yet. Before it goes live:
    the GitHub repo and push.
 2. **CI has not run for real yet** — `.github/workflows/build.yml` is
    written and the fixture job's logic has been verified locally
-   (equivalent `dbt build --vars` command, 91/91 green), but it needs a
+   (equivalent `dbt build --vars` command, 91/91 nodes green), but it needs a
    real push to a GitHub-hosted repo to confirm the Actions runner
    environment behaves the same as local Windows + venv.
 3. **`docs/dbt/` and `docs/dashboard/` are committed but not yet deployed

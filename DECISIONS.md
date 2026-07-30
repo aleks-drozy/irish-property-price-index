@@ -198,7 +198,9 @@ not an official CSO/NTA taxonomy.
 
 ## The headline finding (computed from `dbt build` on the real 797,774-row dataset, 2026-07-30)
 
-**Full build is green**: 91/91 tests pass with `--warn-error`, both
+**Full build is green**: 91/91 nodes pass (14 models, 4 seeds, 73 data
+tests, of which 69 are generic tests and 4 are singular tests) with
+`--warn-error`, both
 `region_scope`s produce a continuous month series from 2010-01 to 2026-07
 (199 months) with the default `min_stratum_n=30`. 756,288 of 797,774 raw
 rows are in-index (1,072 exact-duplicate copies dropped, 40,414
@@ -237,8 +239,8 @@ series says they rose, or vice versa. The largest single swing:
 trough, plausibly a period where a shrinking pool of higher-value sales
 pulled the stratified measure up while a compositional shift toward
 distressed/lower-value sales pulled the raw median down. Second largest:
-**Dublin, 2016-02**: headline YoY **-5.20%** vs mix-adjusted YoY **+5.28%**
-(a 10.47-point gap).
+**National, 2014-04**: headline YoY **-3.45%** vs mix-adjusted YoY **+8.06%**
+(an 11.51-point gap).
 
 This was written after the pipeline ran, from the actual mart output, per
 the plan's explicit instruction not to pre-draft the finding.
