@@ -26,7 +26,7 @@ renamed as (
         trim(upper(address_raw)) as address,
         trim(upper(county_raw)) as county,
         nullif(trim(upper(eircode_raw)), '') as eircode,
-        cast(
+        try_cast(
             replace(replace(price_raw, '€', ''), ',', '')
             as decimal(14, 2)
         ) as price_eur,

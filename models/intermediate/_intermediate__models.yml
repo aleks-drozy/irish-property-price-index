@@ -18,6 +18,7 @@ models:
                   - exact_duplicate
                   - not_full_market_price
                   - unmapped_property_type
+                  - missing_sale_date
                   - invalid_price
               config:
                 where: "exclusion_reason is not null"

@@ -56,8 +56,8 @@ mapped as (
 price_bounds as (
 
     select
-        approx_quantile(price_eur, {{ var('winsor_low_pct') }}) as p_low,
-        approx_quantile(price_eur, {{ var('winsor_high_pct') }}) as p_high
+        quantile_cont(price_eur, {{ var('winsor_low_pct') }}) as p_low,
+        quantile_cont(price_eur, {{ var('winsor_high_pct') }}) as p_high
     from mapped
     where not is_exact_duplicate
 
@@ -116,6 +116,7 @@ final as (
             when is_exact_duplicate then 'exact_duplicate'
             when not_full_market_price then 'not_full_market_price'
             when property_type is null then 'unmapped_property_type'
+            when date_of_sale is null then 'missing_sale_date'
             when price_eur is null or price_eur <= 0 then 'invalid_price'
             else null
         end as exclusion_reason
