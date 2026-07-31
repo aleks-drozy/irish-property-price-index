@@ -46,7 +46,8 @@ jobs:
         # only (never for the weekly full job) keeps the fixture build fast
         # and deterministic without changing the real methodology - see
         # DECISIONS.md.
-        run: dbt build --warn-error --vars '{min_stratum_n: 2}'
+        run: |
+          dbt build --warn-error --vars '{min_stratum_n: 2}'
 
   full:
     name: full build (live PPR download)
