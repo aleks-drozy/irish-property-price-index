@@ -7,7 +7,7 @@ SQL, that shows where a naive headline median diverges from a
 composition-adjusted measure — and how that divergence differs between
 Dublin and the rest of the country.
 
-**[Dashboard →](./docs/dashboard/index.html)** · **[dbt docs / lineage DAG →](./docs/dbt/index.html)** — both built from the real 797,774-row dataset and committed to this repo; open them via a local static file server (`fetch()` needs `http://`, not `file://` — see "Running it locally"). Not yet deployed to a public URL — see "What's left before publishing".
+**[Dashboard →](https://aleks-drozy.github.io/irish-property-price-index/dashboard/)** · **[dbt docs / lineage DAG →](https://aleks-drozy.github.io/irish-property-price-index/dbt/)** — both built from the real 797,774-row dataset. Deployed via GitHub Pages from `docs/`; to run them locally instead, open via a local static file server (`fetch()` needs `http://`, not `file://` — see "Running it locally").
 
 ---
 
@@ -191,28 +191,9 @@ real default. See DECISIONS.md.)
 
 ---
 
-## What's left before this is ready to publish
+## Roadmap
 
-This was built and committed **locally only**, as instructed — nothing
-has been pushed anywhere public yet. Before it goes live:
-
-1. **Review this README and DECISIONS.md** for tone/accuracy, then create
-   the GitHub repo and push.
-2. **CI has not run for real yet** — `.github/workflows/build.yml` is
-   written and the fixture job's logic has been verified locally
-   (equivalent `dbt build --vars` command, 91/91 nodes green), but it needs a
-   real push to a GitHub-hosted repo to confirm the Actions runner
-   environment behaves the same as local Windows + venv.
-3. **`docs/dbt/` and `docs/dashboard/` are committed but not yet deployed
-   to a public URL** — both are built from the real full dataset and
-   verified rendering correctly via a local Playwright check (screenshots
-   taken, one real bug found and fixed — see DECISIONS.md); the `full` CI
-   job rebuilds and deploys them to Pages on the first successful run
-   against a real, pushed repo.
-4. **CV bullet**: not drafted in this pass — add once the repo is public
-   and the Pages URLs are live, per your standing DRAFT-NOT-SENT rule for
-   anything outward-facing.
-5. Optional upgrade path, not required: swap the static dashboard for
-   Evidence.dev (the plan's original first choice) — this build used the
-   plan's own documented fallback (a dependency-free static page) to keep
-   total build time inside the session, per the plan's explicit cut-line.
+- **Optional upgrade, not required**: swap the static dashboard for
+  Evidence.dev. The current build uses a dependency-free static page,
+  which is a deliberate, documented fallback rather than a placeholder —
+  see DECISIONS.md for the trade-off.
