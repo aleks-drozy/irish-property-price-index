@@ -32,6 +32,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Fetch CSO RPPI benchmark
+        # stg_cso__rppi has no fixture toggle (unlike the PPR source, see
+        # macros/ppr_source.sql) - it always reads data/raw/cso_rppi.parquet,
+        # which is gitignored. Without this step every fixture-job run fails
+        # with "No files found that match the pattern data/raw/cso_rppi.parquet".
+        # The endpoint is public CSO PxStat data, no auth, ~110KB - cheap
+        # enough to fetch live in the fast job too, same as the full job does.
+        run: python scripts/fetch_cso_rppi.py
+
       - name: dbt deps
         run: dbt deps
 
