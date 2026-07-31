@@ -296,3 +296,36 @@ such anywhere in the README.
 Address normalisation/geocoding beyond the Dublin-district regex,
 full Eircode parsing, Small Area joins, incremental materialisation, any
 hedonic model, any per-property page.
+
+---
+
+## CI fixture anonymised + duplicate injection fixed (2026-07-31)
+
+The committed fixture (`data/fixture/ppr_fixture.csv`) previously
+republished ~40k real address-level sale records (free-text address +
+full Eircode) - exactly the bulk redistribution the `.gitignore` comment
+excludes `data/raw/` for. Two changes, both in `scripts/build_fixture.py`:
+
+1. **The fixture is now synthetic-address / real-price-and-date data.**
+   Address and Eircode are replaced after sampling; every other column
+   (date, county, price, NFMP, VAT, description, size description) is
+   byte-identical to the source row. The two things the pipeline actually
+   consumes from the anonymised columns are preserved exactly:
+   the "DUBLIN NN" district token is re-embedded verbatim in the synthetic
+   address (including invalid tokens, so the DUBLIN_UNKNOWN fall-through
+   stays exercised), and the non-identifying 3-char Eircode routing key is
+   kept with only the unique 4-char identifier randomised. District-signal
+   parity verified against the old fixture: 5,781 address tokens and
+   2,677 `D__` routing keys on the same base sample.
+2. **Full-row duplicates are now actually present.** The old script
+   claimed to keep known duplicate rows for the dedupe tests but called
+   `.drop_duplicates()` right after, so the fixture had zero duplicates
+   and the fast CI job never exercised the `exact_duplicate` path. The
+   script now injects 20 exact copies of anonymised rows post-anonymisation
+   and asserts the written file contains >0 full-row duplicates, so this
+   cannot silently regress.
+
+Fixture-based `dbt build --warn-error --vars '{min_stratum_n: 2}'`:
+91/91 PASS before and after the regeneration; 20 rows now flow through
+`is_exact_duplicate` / `exclusion_reason = 'exact_duplicate'` into
+`mart_data_quality` (previously 0).
