@@ -153,6 +153,7 @@ models/
 tests/                    4 singular tests (weights sum to 1, no thin strata in the index,
                            continuous month series, zero unmapped descriptions) + 69 generic tests
 scripts/                  fetch_ppr.py, fetch_cso_rppi.py, build_fixture.py, export_dashboard_data.py
+docs/index.html           Pages site root: redirects to dashboard/
 docs/dashboard/           static, dependency-free dashboard (Overview / Mix shift / Method / Validation)
 data/fixture/             ~40k-row stratified sample of the real data, committed, used by fast CI
 .github/workflows/        build.yml: fixture job (every push) + full job (weekly + manual)
